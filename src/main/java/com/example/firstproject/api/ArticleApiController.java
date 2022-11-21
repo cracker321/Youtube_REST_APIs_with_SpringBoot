@@ -1,12 +1,16 @@
 package com.example.firstproject.api;
 
 
+import com.example.firstproject.Mapper.ArticleMapper;
 import com.example.firstproject.dto.ArticleDto;
+import com.example.firstproject.dto.MultiResponseDto;
+import com.example.firstproject.dto.SingleResponseDto;
 import com.example.firstproject.entity.Article;
 import com.example.firstproject.repository.ArticleRepository;
 import com.example.firstproject.service.ArticleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,23 +51,37 @@ public class ArticleApiController {
                //'클래스 ArticleService'를 이렇게 바로 여기서 '필드화' 시켜 DI 해줄 수 있음.
     private ArticleService articleService;
 
-    //[ GET ]: '게시글 조회'를 요청. '모든 게시글들'을 조회
-    @GetMapping("api/articles")
-    public List<Article> index() { //'모든 article(게시글)들(=데이터 집합체이기에 'List'를 사용)을 db로부터 가져오는 메소드.
+    @Autowired
+    private ArticleMapper articleMapper;
 
-        return articleService.index(); //이제 기존의 'return articleRepository.findAll()'이 아니라,
+
+    //============================================================================================================
+
+    //[ GET ]: '모든 게시글 조회'를 요청. '모든 게시글들'을 조회
+    @GetMapping("api/articles")
+    public ResponseEntity show(@Positive @RequestParam int page,
+                               @Postivie @RequestParam int size) { //'모든 article(게시글)들(=데이터 집합체이기에 'List'를 사용)을 db로부터 가져오는 메소드.
+
+        Page<Article> pageArticles = articleService.showArticleList(page - 1, size);
+        List<Article> shownArticles = pageArticles.getContent(); //'Page 타입의 내장 메소드 getContent'
+
+        return new ResponseEntity<>(
+                new MultiResponseDto<>(articleMapper.toArticleDtos(shownArticles), pageArticles), HttpStatus.OK); //이제 기존의 'return articleRepository.findAll()'이 아니라,
         //이 'reuturn문'을 'service'로 보내서 그 내부에 작성하도록 하고,
         //여기서는 그 'return문 내용을 담은', 'serivce 객체의 메소드 index'를 호출한다.
     }
+//=====================================================================================================================
 
-
-    //[ GET ]: '게시글 조회'를 요청. '특정 하나의 게시글'을 조회
+    //[ GET ]: '특정 하나의 게시글 조회'를 요청.
     @GetMapping("api/articles/{id}")
-    public Article show(@PathVariable Long id) { //'사용자'가 '컨트롤러'에게 'id 번호'를 JSON 형식 데이터로 dto에 담아 건네주면서 
+    public Article show(@PathVariable Long id) { //'사용자'가 '컨트롤러'에게 'id 번호'를 JSON 형식 데이터로 dto에 담아 건네주면서
         //'특정 하나의 article(게시글)'을 db로부터 가져와! 라고 명령했기에,
         //이를 실행하고자, '컨트롤러'가 'service'에게 명령하며 데이터 조회하라는 메소드
 
-        return articleService.show(id);
+        Article shownArticle = articleService.showArticle(id);
+
+        return new ResponseEntity<>(
+                new SingleResponseDto<>(articleMapper.toArticleDto(shownArticle)), HttpStatus.OK);
     }
 
 
@@ -76,10 +94,13 @@ public class ArticleApiController {
 
     //[ POST ]: '새로운 게시글을 작성'하는 요청.
     @PostMapping("api/articles")
-    public ResponseEntity<Article> create(@RequestBody ArticleDto articleDto) { //- 'Rest API'에서 '클라이언트'가
+    public ResponseEntity<Article> create(@Valid @RequestBody ArticleDto articleDto) { //- 'Rest API'에서 '클라이언트'가
                                                                                 //JSON 형식으로 매개변수에 dto 데이터를 전송할 때는
                                                                                 //무조건 @RequestBody를 넣어줘야 함
-        Article created = articleService.create(articleDto); //'사용자'로부터 전달받은 'dto 객체'를 'service'에 전달해주고,
+
+        Article createdArticle = articleService.createArticle(articleMapper.toArticle(articleDto));
+
+        //Article created = articleService.create(articleDto); //'사용자'로부터 전달받은 'dto 객체'를 'service'에 전달해주고,
                                                              //이것이 '잘 전달되어서, db까지 가서 잘 작업해서 다시 컨트롤러로
                                                              //잘 리턴되었다'라는 정보를,
                                                              //'Article 엔티티 객체'에 넣어줌.
@@ -90,9 +111,10 @@ public class ArticleApiController {
                                                              //(23강 댓글 밑으로 쭉 내리면 관련 질문 및 답변 있음)
 
 
-        return (created != null) ? //'사용자'로부터 '새로운 게시글 정보'를 요청받아 이것을 'db에 저장'하여 '새로운 게시글 작성'함.
-                ResponseEntity.status(HttpStatus.OK).body(created) : //성공하면 --> 'OK 상태코드'. 'body'에 'created'를 실어서 보내줌
-                ResponseEntity.status(HttpStatus.BAD_REQUEST).build();//실패하면 --> '에러 상태코드'. cf) 삼항연산자.
+        return new ResponseEntity<>(
+                new SingleResponseDto<>(articleMapper.toArticleDto(createdArticle), HttpStatus.OK); //'사용자'로부터 '새로운 게시글 정보'를 요청받아 이것을 'db에 저장'하여 '새로운 게시글 작성'함.
+              //성공하면 --> 'OK 상태코드'. 'body'에 'created'를 실어서 보내줌
+              //실패하면 --> '에러 상태코드'. cf) 삼항연산자.
         //'build'를 'build(null)'로 해줘도 됨.
     }
 
@@ -106,13 +128,13 @@ public class ArticleApiController {
     //[ PATCH ] : '기존의 게시글을 수정'하는 요청
     //- '사용자'가 '수정해야 할 게시글'을 '이미 작성완료하여서', 그 데이터를 'dto'에 담아서 '컨트롤러'로 보내줌
     @PatchMapping("/api/articles/{id}")
-    public ResponseEntity<Article> update(@PathVariable Long id, @RequestBody ArticleDto articleDto){
+    public ResponseEntity<Article> update(@PathVariable Long id, @Valid @RequestBody ArticleDto articleDto){
         //-'컨트롤러(웨이터)'는 '클라이언트'로부터, '클라이언트가 보내는 정보(매개변수)'만 잘 받아오고,
         //- 중간 요리 과정은 '서비스(주방장)'에게 하라 명령하고
         //- 그 결과(return값)를 들고 손님에게 잘 갖다주기만 하면 된다.
 
 
-       Article updated = articleService.update(id, articleDto); //'사용자'로부터 전달받은 'dto 객체'를 'service'에 전달해주고,
+       Article updatedArticle = articleService.updateArticle(articleMapper.toArticle(articleDto)); //'사용자'로부터 전달받은 'dto 객체'를 'service'에 전달해주고,
                                                                 //이것이 '잘 전달되어서, db까지 가서 잘 작업해서 다시 컨트롤러로
                                                                 //잘 리턴되었다'라는 '정보'를,
                                                                 //'Article 엔티티 객체'에 넣어줌.
@@ -135,9 +157,12 @@ public class ArticleApiController {
                                                                 //(23강 댓글 밑으로 쭉 내리면 관련 질문 및 답변 있음)
 
 
-        return (updated != null) ? //'dto 객체'가 'entity 객체'로 '잘 변환되어 데이터가 온전히 존재'하면,
-                ResponseEntity.status(HttpStatus.OK).body(updated): //'상태코드 OK'를 보내주고,
-                                   ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); //그렇지 않으면, '에러코드'를 보내줌
+        return (updatedArticle != null) ? //'dto 객체'가 'entity 객체'로 '잘 변환되어 데이터가 온전히 존재'하면,
+                ResponseEntity.status(HttpStatus.OK).body(updatedArticle): //'상태코드 OK'를 보내주고,
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); //그렇지 않으면, '에러코드'를 보내줌
+    // return new ResponseEntity<>(
+    //          new SingleResponseDto<>(articleMapper.toArticleDto(updatedArticle)), HttpStatus.OK);
+
     }
 
 //==================================================================================================================
@@ -149,10 +174,9 @@ public class ArticleApiController {
 
     //[ DELETE ]
     @DeleteMapping("/api/articles/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id){ //'삭제 기능'이므로, '사용자'로부터 '특정 데이터'를 '받아올 필요가
+    public ResponseEntity delete(@PathVariable Long id){ //'삭제 기능'이므로, '사용자'로부터 '특정 데이터'를 '받아올 필요가
                                                                //없으니', '@RequestBody ArticleDto articleDto'는 없다.
-
-        Article deleted = articleService.delete(id); //'사용자'로부터 전달받은 'dto 객체'를 'service'에 전달해주고,
+        Article deletedArticle = articleService.deleteArticle(id); //'사용자'로부터 전달받은 'dto 객체'를 'service'에 전달해주고,
                                                      //이것이 '잘 전달되어서, db까지 가서 잘 작업해서 다시 컨트롤러로
                                                      //잘 리턴되었다'라는 '정보'를
                                                      //'Article 엔티티 객체'에 넣어줌..
@@ -166,9 +190,11 @@ public class ArticleApiController {
                                                      //'Article Dto 객체'로 반환해야 가장 이상적이다!
                                                      //(23강 댓글 밑으로 쭉 내리면 관련 질문 및 답변 있음)
 
-        return (deleted != null) ? //'Article 엔티티인 deleted'가
+        return (deletedArticle != null) ? //'Article 엔티티인 deletedArticle'가
                 ResponseEntity.status(HttpStatus.NO_CONTENT).build() : //성공적으로 삭제되었다면, good요청을 보내주면 되고
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); //삭제에 실패했다면, bad요청으로 보내주면 된다
+
+        //return new ReponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
 //==================================================================================================================

@@ -32,15 +32,6 @@ public class CommentDto { //사용자가 보낸 '조회, 생성, 수정 등'의 
 
 
     //'Comment 엔티티 객체'를 'CommentDto 객체'로 '변환'시켜주는 메소드
-    public static CommentDto toCommentDto(Comment comment){ //- '개별 댓글 entity 객체인 Comment'를 '개별 댓글 dto 객체'로
-                                                                // 변환시켜주는 메소드.
-                                                                //'static'은 '클래스 메소드'를 선언할 때 사용됨
-        return new CommentDto( //23강 12:00~. '개별 댓글 CommentDto 객체를 만들어주는 생성 메소드 CommentDto'
-                comment.getId(),
-                comment.getArticle().getId(),
-                comment.getNickname(),
-                comment.getBody()
-                );
-    }
+
 
 }
