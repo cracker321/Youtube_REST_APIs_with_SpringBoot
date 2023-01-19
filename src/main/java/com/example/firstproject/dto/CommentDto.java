@@ -32,6 +32,14 @@ public class CommentDto { //사용자가 보낸 '조회, 생성, 수정 등'의 
 
 
     //'Comment 엔티티 객체'를 'CommentDto 객체'로 '변환'시켜주는 메소드
+    public static CommentDto toCommentDto(Comment comment){
+        return new CommentDto(
+                comment.getId(),
+                comment.getArticle().getId(),
+                comment.getNickname(),
+                comment.getBody()
+        );
 
+    }
 
 }

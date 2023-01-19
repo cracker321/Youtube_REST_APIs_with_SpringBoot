@@ -1,7 +1,6 @@
 package com.example.firstproject.api;
 
 
-import com.example.firstproject.Mapper.CommentMapper;
 import com.example.firstproject.annotation.RunningTime;
 import com.example.firstproject.dto.CommentDto;
 import com.example.firstproject.service.CommentSerivce;
@@ -20,8 +19,8 @@ public class CommentApiController {
     @Autowired
     private CommentSerivce commentSerivce;
 
-    @Autowired
-    private CommentMapper commentMapper;
+//    @Autowired
+//    private CommentMapper commentMapper;
 
 //======================================================================================================================
 
@@ -44,7 +43,6 @@ public class CommentApiController {
                                                                            //여기 컨트롤러에서 '묶음 댓글 dto'로 만들어,
                                                                            //'commentDtos'에 저장해줌
                                                                            //(사용자에게 전달하는 최종물이 'commentDtos')
-        List<CommentDto>
 
         //2.< '결과를 가져온다' > //강의에서는 일단 '잘 조회되었다'고 가정하여 ~~하게 썼으나,  23강 06:00~
                                 //내가 임의로 '성공적으로 조회된 경우'와 '조회 실패한 경우'를 나눠서 아래처럼 작성해봄
